@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Checklist MP1</title>
+</head>
+<body>
+
+<h2>Login</h2>
+<input id="usuario" placeholder="Usuário">
+<button onclick="iniciar()">Entrar</button>
+
+<div id="app" style="display:none">
+<h2>Checklist MP1 (Escala 12x36)</h2>
+<div id="lista"></div>
+
+<button onclick="verDashboard()">Ver Dashboard</button>
+<pre id="dash"></pre>
+</div>
+
+<script>
+let usuario;
+
+const baseDate = new Date('2026-04-20');
+const turmas = ['A','B','C','D'];
+
+function getTurma(data){
+  const diff = Math.floor((data - baseDate)/(1000*60*60*24));
+  const ciclo = Math.floor(diff/2);
+  return turmas[(ciclo % 4 + 4) % 4];
+}
+
+function iniciar(){
+  usuario = document.getElementById('usuario').value;
+  if(!usuario) return alert('Digite o usuário');
+
+  document.getElementById('app').style.display='block';
+  gerar();
+}
+
+function format(d){
+  return d.toLocaleDateString('pt-BR');
+}
+
+function gerar(){
+  let html='';
+
+  for(let i=0;i<30;i++){
+    const data = new Date();
+    data.setDate(data.getDate()-i);
+
+    const turma = getTurma(data);
+
+    html += `
+    <div style="border-bottom:1px solid #ccc; margin:5px; padding:5px;">
+      <b>${format(data)} - Turma ${turma}</b><br>
+
+      ✔️ Feito 
+      <input type="checkbox" onchange="toggle(${i}, this.checked)">
+
+      <br>
+      Motivo:
+      <input id="motivo${i}" placeholder="Obrigatório se não feito">
+
+      <button onclick="salvar('${format(data)}','${turma}',${i})">
+        Salvar
+      </button>
+    </div>`;
+  }
+
+  document.getElementById('lista').innerHTML = html;
+}
+
+function toggle(i, checked){
+  const campo = document.getElementById('motivo'+i);
+  campo.style.display = checked ? 'none' : 'block';
+}
+
+function salvar(data, turma, i){
+  const check = document.querySelectorAll('input[type=checkbox]')[i].checked;
+  const motivo = document.getElementById('motivo'+i).value;
+
+  if(!check && !motivo){
+    alert('Motivo obrigatório!');
+    return;
+  }
+
+  fetch('/salvar',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      usuario,
+      turma,
+      data,
+      status: check?'Feito':'Não',
+      motivo
+    })
+  });
+
+  alert('Salvo!');
+}
+
+function verDashboard(){
+  fetch('/dashboard')
+  .then(r=>r.json())
+  .then(d=>{
+    document.getElementById('dash').textContent =
+      JSON.stringify(d, null, 2);
+  });
+}
+</script>
+
+</body>
+</html>
